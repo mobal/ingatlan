@@ -1,0 +1,6 @@
+{
+    "python.linting.pylintEnabled": true,
+    "python.linting.enabled": true,
+    "python.venvPath": "C:\\Users\\mobal\\AppData\\Local\\pypoetry\\Cache\\virtualenvs\\ingatlan-0LIMJMZF-py3.9",
+    "python.pythonPath": "C:\\Users\\mobal\\AppData\\Local\\pypoetry\\Cache\\virtualenvs\\ingatlan-0LIMJMZF-py3.9"
+}
