@@ -1,6 +1,7 @@
 from bs4 import BeautifulSoup
 
 import io
+import json
 import logging
 import math
 import os
@@ -8,6 +9,7 @@ import requests
 import sys
 import traceback
 
+DB_PATH = "db.json"
 BASE_URL = "https://ingatlan.com"
 PAGE_SIZE = 20
 
@@ -39,6 +41,12 @@ def __get(url, stream=False):
         sys.exit(res.status_code)
 
 
+def __get_image(url):
+    res = __get(url, True)
+    res.raw.decode_content = True
+    return res.raw
+
+
 def __get_last_page(url):
     return int(
         BeautifulSoup(__get(url).content, "html.parser")
@@ -59,7 +67,9 @@ def __parse(divs):
                 ).text[:-10]
                 if div.find("div", {"class": "listing__data--balcony-size"})
                 else None,
-                "image": div.find("img", {"class": "listing__image"})["src"]
+                "image": __get_image(
+                    div.find("img", {"class": "listing__image"})["src"]
+                )
                 if div.find("img", {"class": "listing__image"})
                 else None,
                 "price": div.find("div", {"class": "price"}).text[:-5],
@@ -75,6 +85,41 @@ def __parse(divs):
     return properties
 
 
+def __load_database():
+    if os.path.exists(DB_PATH):
+        with open(DB_PATH, "r") as f:
+            try:
+                return json.load(f)
+            except:
+                log.error(traceback.format_exc())
+    else:
+        log.error('The given path "{}" is not a valid path'.format(DB_PATH))
+    return []
+
+
+def __save_database(data):
+    with open(DB_PATH, "w") as f:
+        try:
+            json.dump(data, f)
+        except:
+            log.error(traceback.format_exc)
+            sys.exit(1)
+
+
+def __update_database(properties):
+    diff = []
+    db = __load_database()
+    for p in properties:
+        t = p.copy()
+        p.pop("image")
+        if p not in db:
+            db.append(p)
+            diff.append(p)
+    if (len(diff) > 0):
+        __save_database(db)
+    return diff
+
+
 def main():
     curr = 0
     properties = []
@@ -83,12 +128,17 @@ def main():
         url = "{}/lista/70-m2-felett+elado+xiii-ker+lakas+50-60-mFt?page={}".format(
             BASE_URL, curr + 1
         )
-        print(url)
         if curr == 0:
             last = __get_last_page(url)
         properties += __crawl(url)
         curr += 1
-    log.info(properties)
+    if len(properties) > 0:
+        diff = __update_database(properties)
+        log.info('Found "{}" new property'.format(len(diff)))
+        '''if len(diff) > 0:
+            __send_mails(diff)'''
+    else:
+        log.info("The search returned without results")
 
 
 if __name__ == "__main__":
