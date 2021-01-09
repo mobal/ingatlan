@@ -1,0 +1,2 @@
+# ingatlan
+Ingatlan.com crawler
